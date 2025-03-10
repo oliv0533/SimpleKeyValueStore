@@ -1,15 +1,17 @@
 ﻿using FastEndpoints;
+using MediatR;
 using SimpleKeyValueStore.Interfaces;
+using SimpleKeyValueStore.UseCases.Queries;
 
 namespace SimpleKeyValueStore.Endpoints;
 
 public class GetData : Endpoint<GetDataRequest, GetDataResponse>
 {
-    private readonly IKeyValueStore _keyValueStore;
+    private readonly IMediator _mediator;
 
-    public GetData(IKeyValueStore keyValueStore)
+    public GetData(IMediator mediator)
     {
-        _keyValueStore = keyValueStore;
+        _mediator = mediator;
     }
     
     public override void Configure()
@@ -20,7 +22,7 @@ public class GetData : Endpoint<GetDataRequest, GetDataResponse>
 
     public override async Task HandleAsync(GetDataRequest req, CancellationToken ct)
     {
-        var value = await _keyValueStore.GetDataAsync(req.Key, ct);
+        var value = await _mediator.Send(new GetDataQuery(req.Key), ct);
 
         await SendAsync(new GetDataResponse(value), cancellation: ct);
     }

@@ -1,15 +1,17 @@
 ﻿using FastEndpoints;
+using MediatR;
 using SimpleKeyValueStore.Interfaces;
+using SimpleKeyValueStore.UseCases.Commands;
 
 namespace SimpleKeyValueStore.Endpoints;
 
 public class DeleteData : Endpoint<DeleteDataRequest>
 {
-    private readonly IKeyValueStore _keyValueStore;
+    private readonly IMediator _mediator;
 
-    public DeleteData(IKeyValueStore keyValueStore)
+    public DeleteData(IMediator mediator)
     {
-        _keyValueStore = keyValueStore;
+        _mediator = mediator;
     }
     
     public override void Configure()
@@ -20,7 +22,7 @@ public class DeleteData : Endpoint<DeleteDataRequest>
 
     public override async Task HandleAsync(DeleteDataRequest req, CancellationToken ct)
     {
-        await _keyValueStore.DeleteDataAsync(req.Key, ct);
+        await _mediator.Send(new DeleteDataCommand(req.Key), ct);
         
         await SendOkAsync(ct);
     }
