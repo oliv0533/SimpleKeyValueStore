@@ -11,8 +11,10 @@ builder.Services.AddScoped<IKeyValueStore, KeyValueStore>();
 builder.Services.AddMediatR(cfg =>
 {
     cfg.AddOpenBehavior(typeof(ExclusiveCommandBehavior<,>));
-    cfg.RegisterServicesFromAssembly(typeof(ISimpleKeyValueStoreMarker).Assembly);
+    cfg.RegisterServicesFromAssemblyContaining<ISimpleKeyValueStoreMarker>();
 });
+
+builder.Services.AddMemoryCache();
 
 builder.Services
     .AddFastEndpoints()

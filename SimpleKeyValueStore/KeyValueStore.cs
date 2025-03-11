@@ -1,15 +1,22 @@
 ﻿using System.Text;
 using System.Text.Json;
+using MediatR;
+using Microsoft.Extensions.Caching.Memory;
+using SimpleKeyValueStore.Events;
 using SimpleKeyValueStore.Interfaces;
 
 namespace SimpleKeyValueStore;
 
 public class KeyValueStore : IKeyValueStore
 {
+    private readonly IMemoryCache _memoryCache;
+    private readonly IMediator _mediator;
     private readonly string _filePath;
-
-    public KeyValueStore(IConfiguration configuration)
+    
+    public KeyValueStore(IConfiguration configuration, IMemoryCache memoryCache, IMediator mediator)
     {
+        _memoryCache = memoryCache;
+        _mediator = mediator;
         _filePath = configuration.GetValue<string>("KeyValueStore:FilePath") 
                     ?? throw new ApplicationException("Path for KeyValueStore is missing.");
 
@@ -32,6 +39,8 @@ public class KeyValueStore : IKeyValueStore
             dictionary[key] = value;
             
             await SaveDictionaryToFileSystem(dictionary, fileStream, cancellationToken);
+            
+            await _mediator.Publish(new KeyValueStoreEntryModifiedEvent(key, value), cancellationToken);
         }
         catch (Exception e)
         {
@@ -42,6 +51,11 @@ public class KeyValueStore : IKeyValueStore
 
     public async Task<object?> GetDataAsync(string key, CancellationToken cancellationToken)
     {
+        if (_memoryCache.TryGetValue(key, out object? value))
+        {
+            return value;
+        }
+        
         try
         {
             await using FileStream fileStream = new(_filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -68,6 +82,8 @@ public class KeyValueStore : IKeyValueStore
             dictionary.Remove(key);
             
             await SaveDictionaryToFileSystem(dictionary, fileStream, cancellationToken);
+
+            await _mediator.Publish(new KeyValueStoreEntryDeletedEvent(key), cancellationToken);
         }
         catch (Exception e)
         {
